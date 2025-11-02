@@ -124,9 +124,9 @@ private:
     unique_ptr<BallTreeNode> buildTree(vector<Point>& points) {
         auto node = make_unique<BallTreeNode>();
         
-        if (points.empty()) return node;
+        if (points.empty()) return node; // if no points, returns empty node
         
-        // Compute center and radius
+        // defining the bounding balls
         node->center = computeCentroid(points);
         node->radius = 0.0;
         for (const auto& p : points) {
@@ -134,19 +134,19 @@ private:
             if (dist > node->radius) node->radius = dist;
         }
         
-        // Leaf node condition
+        // no further subdivision, stops recursion, threshold 
         if (points.size() <= leafSize) {
             node->isLeaf = true;
             node->points = points;
             return node;
         }
         
-        // Find two pivot points
+        // dicide current set of points into two subsets
         node->isLeaf = false;
         int pivot1Idx = findFarthest(node->center, points);
-        Point pivot1 = points[pivot1Idx];
+        Point pivot1 = points[pivot1Idx]; // first pivot farthest from centroid
         int pivot2Idx = findFarthest(pivot1, points);
-        Point pivot2 = points[pivot2Idx];
+        Point pivot2 = points[pivot2Idx]; // second pivot farthest from first pivot
         
         // Partition points
         vector<Point> leftPoints, rightPoints;
@@ -154,50 +154,50 @@ private:
             double dist1 = euclideanDistance(p, pivot1);
             double dist2 = euclideanDistance(p, pivot2);
             if (dist1 <= dist2) {
-                leftPoints.push_back(p);
+                leftPoints.push_back(p); // if close or equidistant from pivot 1, added to left points
             } else {
-                rightPoints.push_back(p);
+                rightPoints.push_back(p); // else added to right points
             }
         }
         
-        // Handle degenerate case
+        // handle degenerate case
         if (leftPoints.empty() || rightPoints.empty()) {
-            node->isLeaf = true;
+            node->isLeaf = true; 
             node->points = points;
             return node;
-        }
+        } // if one of the subset is empty, split failed to create two balanced child node, in thsi case node is forced to leaf  node, preventing infinite recursion
         
-        // Recursively build subtrees
+        // creates left and right child nodes till leaf size condition is met everywhere
         node->left = buildTree(leftPoints);
         node->right = buildTree(rightPoints);
         
         return node;
     }
     
-    // Search for K nearest neighbors
+    // search for knn
     void searchKNN(BallTreeNode* node, const Point& query, int k,
                    priority_queue<Neighbor>& neighbors) const {
         if (!node) return;
         
-        // Calculate distance to ball center
+        // dist to sphere centre
         double centerDist = euclideanDistance(query, node->center);
-        distanceComputations++;
+        distanceComputations++; // track efficiency of code
         
-        // Triangle inequality pruning
+        // triangle inequality pruning, if outside the sphere mindist is the dist from the query to the centroid, if inside the sphere mindist is 0.0
         double minDist = max(0.0, centerDist - node->radius);
         if (neighbors.size() == k && minDist >= neighbors.top().distance) {
-            return;  // Prune this subtree
+            return;  // prune this subtree
         }
         
-        // Leaf node: check all points
+        // if node is a leaf, 
         if (node->isLeaf) {
             for (const auto& p : node->points) {
                 double dist = euclideanDistance(query, p);
                 distanceComputations++;
                 
-                if (neighbors.size() < k) {
+                if (neighbors.size() < k) { // queue isnt full i.e no of neighbours are less than the target no
                     neighbors.push({p, dist});
-                } else if (dist < neighbors.top().distance) {
+                } else if (dist < neighbors.top().distance) { // all the neighbours are sought, if new points dist is less than farthest current neighbour, that neighbour is popped and new closer neighbour is added
                     neighbors.pop();
                     neighbors.push({p, dist});
                 }
@@ -205,12 +205,12 @@ private:
             return;
         }
         
-        // Internal node: visit children in order of proximity
+        // visiting children nodes
         double leftDist = euclideanDistance(query, node->left->center);
         double rightDist = euclideanDistance(query, node->right->center);
         distanceComputations += 2;
         
-        if (leftDist < rightDist) {
+        if (leftDist < rightDist) { // searching child whose centre is closer to the query point
             searchKNN(node->left.get(), query, k, neighbors);
             searchKNN(node->right.get(), query, k, neighbors);
         } else {
@@ -220,16 +220,16 @@ private:
     }
     
 public:
-    BallTree(int leafSize = 40) : leafSize(leafSize), distanceComputations(0) {}
+    BallTree(int leafSize = 40) : leafSize(leafSize), distanceComputations(0) {} // threshold contructor, default value is 40
     
-    void build(vector<Point>& points) {
+    void build(vector<Point>& points) { // constructing ball tree using provided set of points
         distanceComputations = 0;
         root = buildTree(points);
     }
     
-    vector<pair<Point, double>> findKNN(const Point& query, int k) const {
+    vector<pair<Point, double>> findKNN(const Point& query, int k) const { // knn search for given query point, seeking k neighbours
         distanceComputations = 0;
-        priority_queue<Neighbor> neighbors;
+        priority_queue<Neighbor> neighbors; // creating empty max heap priority queue
         searchKNN(root.get(), query, k, neighbors);
         
         vector<pair<Point, double>> results;
@@ -237,16 +237,16 @@ public:
             results.push_back({neighbors.top().point, neighbors.top().distance});
             neighbors.pop();
         }
-        reverse(results.begin(), results.end());
+        reverse(results.begin(), results.end()); // max-heap gives largest element first, reverse- closest to farthest
         return results;
     }
     
-    long long getDistanceComputations() const { return distanceComputations; }
+    long long getDistanceComputations() const { return distanceComputations; } // efficiency metric - retrieve total num of dist calc performed (N x D computations )
 };
 
-// ============================================================================
-// BRUTE FORCE KNN (for comparison)
-// ============================================================================
+/*
+    bfs for comparision
+*/
 
 class BruteForceKNN {
 private:
@@ -258,14 +258,14 @@ public:
     
     void build(const vector<Point>& dataPoints) {
         points = dataPoints;
-        distanceComputations = 0;
+        distanceComputations = 0; // stores all the data points internally
     }
     
     vector<pair<Point, double>> findKNN(const Point& query, int k) const {
         distanceComputations = 0;
-        priority_queue<Neighbor> neighbors;
+        priority_queue<Neighbor> neighbors; 
         
-        // Check every point
+        // iterate through every point
         for (const auto& p : points) {
             double dist = euclideanDistance(query, p);
             distanceComputations++;
@@ -290,13 +290,13 @@ public:
     long long getDistanceComputations() const { return distanceComputations; }
 };
 
-// ============================================================================
-// DATA GENERATION
-// ============================================================================
+/*
+    data generation
+*/
 
 vector<Point> generateRandomPoints(int numPoints, int dimensions, int seed = 42) {
-    mt19937 rng(seed);
-    uniform_real_distribution<double> dist(0.0, 100.0);
+    mt19937 rng(seed); // initialize mersenne twister engine, using seed (defualting to 42), ensues sequence of random numbers are reproducible
+    uniform_real_distribution<double> dist(0.0, 100.0); // uniform distribution, evenly distributed between 0.0 to 100.0, means all coordinates are covered
     
     vector<Point> points;
     for (int i = 0; i < numPoints; ++i) {
@@ -309,9 +309,9 @@ vector<Point> generateRandomPoints(int numPoints, int dimensions, int seed = 42)
     return points;
 }
 
-// ============================================================================
-// BENCHMARK AND COMPARISON
-// ============================================================================
+/*
+ benchmark and comparision
+*/
 
 void runBenchmark(int numPoints, int dimensions, int k, int numQueries) {
     cout << "\n" << string(80, '=') << endl;
@@ -385,9 +385,9 @@ void runBenchmark(int numPoints, int dimensions, int k, int numQueries) {
     cout << string(80, '=') << endl;
 }
 
-// ============================================================================
-// CORRECTNESS VERIFICATION
-// ============================================================================
+/*
+    verification
+*/
 
 void verifyCorrectness() {
     cout << "\n" << string(80, '=') << endl;
