@@ -3,9 +3,11 @@
     KNN Optimization using Ball Tree Structure
     By: BAM 040 & 050
 
+
     KNN Optimization of the time complexity from O(n) to O(log n) using hyper-sphere tree structure and triangle inequality pruning.
     Goal: Implementing both Brute Force and Ball Tree Methods and comparing them, finding that Ball Tree method is much faster.
  */
+
 
 #include <iostream>
 #include <vector>
@@ -16,14 +18,17 @@
 #include <algorithm>
 #include <iomanip>
 #include <memory>
+#include <limits>  // added for numeric_limits
 
 using namespace std;
 using namespace chrono;
+
 
 /*
     Point Class, allows the code to work with points of any dimension without changing the logic.
     using std::vector<double>
 */
+
 
 class Point {
 public:
@@ -41,9 +46,11 @@ public:
     int size() const { return coords.size(); }
 };
 
+
 /*
     function to calc euclidean distance btw two const objs
 */
+
 
 double euclideanDistance(const Point& p1, const Point& p2) {
     double sum = 0.0;
@@ -54,24 +61,28 @@ double euclideanDistance(const Point& p1, const Point& p2) {
     return sqrt(sum);
 }
 
+
 /*
     ball tree node struct
 */
 
+
 struct BallTreeNode {
-    Point center;                           // centre of hyper sphere
-    double radius;                          // dist from centre to the farthest point
-    vector<Point> points;                   // if isLeaf is TRUE, stores small collection of actual data pointss that belongs to tis cluster
+    Point center;                     // centre of hyper sphere
+    double radius;                   // dist from centre to the farthest point
+    vector<Point> points;            // if isLeaf is TRUE, stores small collection of actual data pointss that belongs to tis cluster
     unique_ptr<BallTreeNode> left;          // pointer to left child
     unique_ptr<BallTreeNode> right;         // pointer to right child
-    bool isLeaf;                            // indicating whether a leaf node or not
+    bool isLeaf;                     // indicating whether a leaf node or not
     
     BallTreeNode() : radius(0.0), isLeaf(true) {}
 };
 
+
 /*
     priority queue for maintaing knn
 */
+
 
 struct Neighbor {
     Point point;
@@ -82,9 +93,11 @@ struct Neighbor {
     }
 };
 
+
 /*
     ball tree implementation
 */
+
 
 class BallTree {
 private:
@@ -205,17 +218,17 @@ private:
             return;
         }
         
-        // visiting children nodes
-        double leftDist = euclideanDistance(query, node->left->center);
-        double rightDist = euclideanDistance(query, node->right->center);
-        distanceComputations += 2;
+        // visiting children nodes with safe null checks to fix errors
+        double leftDist = node->left ? euclideanDistance(query, node->left->center) : std::numeric_limits<double>::max();
+        double rightDist = node->right ? euclideanDistance(query, node->right->center) : std::numeric_limits<double>::max();
+        distanceComputations += (node->left ? 1 : 0) + (node->right ? 1 : 0);
         
         if (leftDist < rightDist) { // searching child whose centre is closer to the query point
-            searchKNN(node->left.get(), query, k, neighbors);
-            searchKNN(node->right.get(), query, k, neighbors);
+            if (node->left) searchKNN(node->left.get(), query, k, neighbors);
+            if (node->right) searchKNN(node->right.get(), query, k, neighbors);
         } else {
-            searchKNN(node->right.get(), query, k, neighbors);
-            searchKNN(node->left.get(), query, k, neighbors);
+            if (node->right) searchKNN(node->right.get(), query, k, neighbors);
+            if (node->left) searchKNN(node->left.get(), query, k, neighbors);
         }
     }
     
@@ -244,9 +257,11 @@ public:
     long long getDistanceComputations() const { return distanceComputations; } // efficiency metric - retrieve total num of dist calc performed (N x D computations )
 };
 
+
 /*
     bfs for comparision
 */
+
 
 class BruteForceKNN {
 private:
@@ -290,9 +305,11 @@ public:
     long long getDistanceComputations() const { return distanceComputations; }
 };
 
+
 /*
     data generation
 */
+
 
 vector<Point> generateRandomPoints(int numPoints, int dimensions, int seed = 42) {
     mt19937 rng(seed); // initialize mersenne twister engine, using seed (defualting to 42), ensues sequence of random numbers are reproducible
@@ -309,9 +326,11 @@ vector<Point> generateRandomPoints(int numPoints, int dimensions, int seed = 42)
     return points;
 }
 
+
 /*
  benchmark and comparision
 */
+
 
 void runBenchmark(int numPoints, int dimensions, int k, int numQueries) {
     cout << "\n" << string(80, '=') << endl;
@@ -374,20 +393,22 @@ void runBenchmark(int numPoints, int dimensions, int k, int numQueries) {
     cout << "RESULTS:" << endl;
     cout << string(80, '-') << endl;
     cout << fixed << setprecision(2);
-    cout << "Ball Tree Build Time:        " << buildTime << " ms" << endl;
-    cout << "Ball Tree Query Time:        " << ballTime << " ms" << endl;
-    cout << "Brute Force Query Time:      " << bruteTime << " ms" << endl;
-    cout << "Speedup:                     " << speedup << "x" << endl;
+    cout << "Ball Tree Build Time:      " << buildTime << " ms" << endl;
+    cout << "Ball Tree Query Time:      " << ballTime << " ms" << endl;
+    cout << "Brute Force Query Time:    " << bruteTime << " ms" << endl;
+    cout << "Speedup:                  " << speedup << "x" << endl;
     cout << "\nDistance Computations (avg per query):" << endl;
-    cout << "  Ball Tree:                 " << avgBallDist << endl;
-    cout << "  Brute Force:               " << avgBruteDist << endl;
-    cout << "  Pruning Efficiency:        " << pruning << "%" << endl;
+    cout << "  Ball Tree:               " << avgBallDist << endl;
+    cout << "  Brute Force:             " << avgBruteDist << endl;
+    cout << "  Pruning Efficiency:      " << pruning << "%" << endl;
     cout << string(80, '=') << endl;
 }
+
 
 /*
     verification
 */
+
 
 void verifyCorrectness() {
     cout << "\n" << string(80, '=') << endl;
@@ -432,14 +453,15 @@ void verifyCorrectness() {
 }
 
 
+
 int main() {
     cout << "\n";
     cout << "============================================================================\n";
-    cout << "                                                                            \n";
+    cout << "                                                                          \n";
     cout << "           K-NEAREST NEIGHBORS OPTIMIZATION USING BALL TREE                 \n";
-    cout << "                                                                            \n";
-    cout << "  Demonstrating O(log N) query complexity vs O(N) brute-force approach      \n";
-    cout << "                                                                            \n";
+    cout << "                                                                          \n";
+    cout << "  Demonstrating O(log N) query complexity vs O(N) brute-force approach     \n";
+    cout << "                                                                          \n";
     cout << "============================================================================\n";
     
     // Verify correctness
