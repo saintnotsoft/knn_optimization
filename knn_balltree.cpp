@@ -1,12 +1,10 @@
-/**
- * K-Nearest Neighbors Optimization Using Ball Tree
- * Data Structures Innovative Assignment
- * 
- * This program demonstrates the optimization of KNN search from O(N) to O(log N)
- * using Ball Tree data structure with triangle inequality pruning.
- * 
- * Compilation: g++ -std=c++14 -O3 -o knn_balltree knn_balltree.cpp
- * Execution: ./knn_balltree (Linux/macOS) or knn_balltree.exe (Windows)
+/*
+     DS Innovative Assignment
+    KNN Optimization using Ball Tree Structure
+    By: BAM 040 & 050
+
+    KNN Optimization of the time complexity from O(n) to O(log n) using hyper-sphere tree structure and triangle inequality pruning.
+    Goal: Implementing both Brute Force and Ball Tree Methods and comparing them, finding that Ball Tree method is much faster.
  */
 
 #include <iostream>
@@ -22,29 +20,30 @@
 using namespace std;
 using namespace chrono;
 
-// ============================================================================
-// DATA STRUCTURE 1: POINT (using std::vector for dynamic dimensions)
-// ============================================================================
+/*
+    Point Class, allows the code to work with points of any dimension without changing the logic.
+    using std::vector<double>
+*/
 
 class Point {
 public:
-    vector<double> coords;  // Vector to store coordinates
+    vector<double> coords;  // for storing coords
     int id;
     
-    Point(int dimensions = 3, int identifier = -1) 
-        : coords(dimensions, 0.0), id(identifier) {}
+    Point(int dimensions = 3, int identifier = -1) // defualt paramenters, 
+        : coords(dimensions, 0.0), id(identifier) {} // coords vector filled with {0.0,0.0,0.0}
     
-    Point(const vector<double>& c, int identifier = -1) 
+    Point(const vector<double>& c, int identifier = -1) // create from existing data
         : coords(c), id(identifier) {}
     
-    double operator[](int i) const { return coords[i]; }
-    double& operator[](int i) { return coords[i]; }
+    double operator[](int i) const { return coords[i]; } // access the coords as if the point obj were an array
+    double& operator[](int i) { return coords[i]; } // returns a reference, lets you change the coordinates
     int size() const { return coords.size(); }
 };
 
-// ============================================================================
-// DISTANCE CALCULATION (Euclidean Distance)
-// ============================================================================
+/*
+    function to calc euclidean distance btw two const objs
+*/
 
 double euclideanDistance(const Point& p1, const Point& p2) {
     double sum = 0.0;
@@ -55,62 +54,62 @@ double euclideanDistance(const Point& p1, const Point& p2) {
     return sqrt(sum);
 }
 
-// ============================================================================
-// DATA STRUCTURE 2: BALL TREE NODE (using std::unique_ptr for tree structure)
-// ============================================================================
+/*
+    ball tree node struct
+*/
 
 struct BallTreeNode {
-    Point center;                           // Center of bounding sphere
-    double radius;                          // Radius of bounding sphere
-    vector<Point> points;                   // Points in leaf nodes (using vector)
-    unique_ptr<BallTreeNode> left;          // Left child (smart pointer)
-    unique_ptr<BallTreeNode> right;         // Right child (smart pointer)
-    bool isLeaf;
+    Point center;                           // centre of hyper sphere
+    double radius;                          // dist from centre to the farthest point
+    vector<Point> points;                   // if isLeaf is TRUE, stores small collection of actual data pointss that belongs to tis cluster
+    unique_ptr<BallTreeNode> left;          // pointer to left child
+    unique_ptr<BallTreeNode> right;         // pointer to right child
+    bool isLeaf;                            // indicating whether a leaf node or not
     
     BallTreeNode() : radius(0.0), isLeaf(true) {}
 };
 
-// ============================================================================
-// DATA STRUCTURE 3: PRIORITY QUEUE (for maintaining K nearest neighbors)
-// ============================================================================
+/*
+    priority queue for maintaing knn
+*/
 
 struct Neighbor {
     Point point;
     double distance;
     
     bool operator<(const Neighbor& other) const {
-        return distance < other.distance;  // Max heap
+        return distance < other.distance;  // max heap (bt where each parent node value if <= to its children node value)
     }
 };
 
-// ============================================================================
-// BALL TREE IMPLEMENTATION
-// ============================================================================
+/*
+    ball tree implementation
+*/
 
 class BallTree {
 private:
-    unique_ptr<BallTreeNode> root;
-    int leafSize;
-    mutable long long distanceComputations;
+    unique_ptr<BallTreeNode> root; // stores the root of entire tree
+    int leafSize; // threshold, stopping tree recursion, if few points, becomes a leaf
+    mutable long long distanceComputations; // total no of dist calculations, mutable becuase allows it to be changes insise const methods
     
-    // Compute centroid of points
+    // find centroid of points
     Point computeCentroid(const vector<Point>& points) {
-        Point centroid(points[0].size());
-        for (const auto& p : points) {
+        Point centroid(points[0].size()); // ensuring correct dimensionality
+        for (const auto& p : points) { // auto reduces the need for explicit type declarations
             for (int i = 0; i < p.size(); ++i) {
-                centroid[i] += p[i];
+                centroid[i] += p[i]; // accumulate 
             }
         }
         for (int i = 0; i < centroid.size(); ++i) {
-            centroid[i] /= points.size();
+            centroid[i] /= points.size(); // avging step, sum of each dimension/total no of points
         }
         return centroid;
     }
     
-    // Find farthest point from given point
+    // find farthest point from given centroid
     int findFarthest(const Point& center, const vector<Point>& points) {
-        double maxDist = -1.0;
-        int farthestIdx = 0;
+        double maxDist = -1.0; // start at negative value to ensure the distance to first point will always be greater
+        int farthestIdx = 0; // start at index 0
         for (size_t i = 0; i < points.size(); ++i) {
             double dist = euclideanDistance(center, points[i]);
             if (dist > maxDist) {
@@ -121,7 +120,7 @@ private:
         return farthestIdx;
     }
     
-    // Build tree recursively
+    // recursion to built tree
     unique_ptr<BallTreeNode> buildTree(vector<Point>& points) {
         auto node = make_unique<BallTreeNode>();
         
@@ -432,19 +431,16 @@ void verifyCorrectness() {
     cout << string(80, '=') << endl;
 }
 
-// ============================================================================
-// MAIN FUNCTION
-// ============================================================================
 
 int main() {
     cout << "\n";
-    cout << "╔════════════════════════════════════════════════════════════════════════════╗\n";
-    cout << "║                                                                            ║\n";
-    cout << "║           K-NEAREST NEIGHBORS OPTIMIZATION USING BALL TREE                 ║\n";
-    cout << "║                                                                            ║\n";
-    cout << "║  Demonstrating O(log N) query complexity vs O(N) brute-force approach     ║\n";
-    cout << "║                                                                            ║\n";
-    cout << "╚════════════════════════════════════════════════════════════════════════════╝\n";
+    cout << "============================================================================\n";
+    cout << "                                                                            \n";
+    cout << "           K-NEAREST NEIGHBORS OPTIMIZATION USING BALL TREE                 \n";
+    cout << "                                                                            \n";
+    cout << "  Demonstrating O(log N) query complexity vs O(N) brute-force approach      \n";
+    cout << "                                                                            \n";
+    cout << "============================================================================\n";
     
     // Verify correctness
     verifyCorrectness();
