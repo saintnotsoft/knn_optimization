@@ -103,7 +103,7 @@ class BallTree {
 private:
     unique_ptr<BallTreeNode> root; // stores the root of entire tree
     int leafSize; // threshold, stopping tree recursion, if few points, becomes a leaf
-    mutable long long distanceComputations; // total no of dist calculations, mutable becuase allows it to be changes insise const methods
+    mutable long long distanceComputations; // total no of dist calculations, mutable becuase allows it to be changes inside const methods
     
     // find centroid of points
     Point computeCentroid(const vector<Point>& points) {
@@ -269,7 +269,7 @@ private:
     mutable long long distanceComputations;
     
 public:
-    BruteForceKNN() : distanceComputations(0) {}
+    BruteForceKNN() : distanceComputations(0) {} // initialize counter to 0
     
     void build(const vector<Point>& dataPoints) {
         points = dataPoints;
@@ -278,18 +278,18 @@ public:
     
     vector<pair<Point, double>> findKNN(const Point& query, int k) const {
         distanceComputations = 0;
-        priority_queue<Neighbor> neighbors; 
+        priority_queue<Neighbor> neighbors; // initializing priority queue
         
         // iterate through every point
         for (const auto& p : points) {
-            double dist = euclideanDistance(query, p);
-            distanceComputations++;
+            double dist = euclideanDistance(query, p); // calc dist btw q and p
+            distanceComputations++; // track of dist calc's
             
             if (neighbors.size() < k) {
                 neighbors.push({p, dist});
             } else if (dist < neighbors.top().distance) {
                 neighbors.pop();
-                neighbors.push({p, dist});
+                neighbors.push({p, dist}); // new closer neighbour added
             }
         }
         
@@ -415,12 +415,12 @@ void verifyCorrectness() {
     cout << "CORRECTNESS VERIFICATION" << endl;
     cout << string(80, '=') << endl;
     
-    auto dataPoints = generateRandomPoints(500, 3);
-    auto query = generateRandomPoints(1, 3, 999)[0];
-    int k = 5;
+    auto dataPoints = generateRandomPoints(500, 3); // generates 500 data points in 3D
+    auto query = generateRandomPoints(1, 3, 999)[0]; // generates 1 query point
+    int k = 5; // test it with 5 nearest neighbours
     
     BallTree ballTree;
-    ballTree.build(dataPoints);
+    ballTree.build(dataPoints); 
     
     BruteForceKNN bruteForce;
     bruteForce.build(dataPoints);
@@ -431,11 +431,11 @@ void verifyCorrectness() {
     cout << "\nComparing top " << k << " neighbors:" << endl;
     bool correct = true;
     for (int i = 0; i < k; ++i) {
-        double diff = abs(ballResults[i].second - bruteResults[i].second);
+        double diff = abs(ballResults[i].second - bruteResults[i].second); // diff between dist values {point,dist} pairs
         cout << "  Rank " << (i+1) << ": Ball Tree=" << fixed << setprecision(6)
              << ballResults[i].second << ", Brute Force=" << bruteResults[i].second;
-        if (diff > 1e-9) {
-            cout << " ✗ MISMATCH";
+        if (diff > 1e-9) { // tolerance set to a billionth 
+            cout << " ✗ MISMATCH"; 
             correct = false;
         } else {
             cout << " ✓";
